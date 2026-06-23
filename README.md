@@ -8,6 +8,8 @@ No dependencies. No build step. Open the file in a browser.
 
 ## What it shows
 
+![page](./assets/page.png)
+
 ### End-to-end pipeline
 
 A live animated pipeline: **Producer → Broker → Topic → Consumer Group → Consumer**. Clicking any component opens a detailed explanation of its internals, configs, and gotchas.
@@ -18,11 +20,13 @@ Animated particles travel through the pipeline on every action so you can see ex
 
 Each partition renders as a row of offset cells. Color tells you the state at a glance:
 
-| Color | Meaning |
-|-------|---------|
-| Default (dark) | Written, not yet consumed |
-| Amber border | Newly written (animates in) |
-| Green border | Consumed and committed |
+
+| Color          | Meaning                     |
+| -------------- | --------------------------- |
+| Default (dark) | Written, not yet consumed   |
+| Amber border   | Newly written (animates in) |
+| Green border   | Consumed and committed      |
+
 
 - `HEAD` pointer marks the latest written offset
 - `▲cg` pointer marks where the consumer group is currently positioned
@@ -40,16 +44,18 @@ Shows each consumer's partition assignment, committed offset, high-water mark, a
 
 ## Interactive actions
 
-| Button | What it simulates |
-|--------|------------------|
-| **Produce Message** | Sends one record. Shows key-based partitioning, the producer buffer, broker append, and ACK flow |
-| **Produce Batch (5)** | Sends five records. Explains `linger.ms`, `batch.size`, and why batching matters for throughput |
-| **Consume & Commit** | Polls one message, advances the consumer offset, explains at-least-once vs exactly-once semantics |
-| **Catch Up Consumer** | Drains all pending messages — lag goes to zero |
-| **Seek to Offset** | Resets all consumer offsets to 0, explains event replay and `seekToBeginning()` |
-| **Show Replication** | Explains leader/follower replication, ISR, and `acks=all` |
-| **Add Partition** | Adds a new partition live, triggers a virtual consumer group rebalance |
-| **Reset Everything** | Clears all state back to a clean slate |
+
+| Button                | What it simulates                                                                                 |
+| --------------------- | ------------------------------------------------------------------------------------------------- |
+| **Produce Message**   | Sends one record. Shows key-based partitioning, the producer buffer, broker append, and ACK flow  |
+| **Produce Batch (5)** | Sends five records. Explains `linger.ms`, `batch.size`, and why batching matters for throughput   |
+| **Consume & Commit**  | Polls one message, advances the consumer offset, explains at-least-once vs exactly-once semantics |
+| **Catch Up Consumer** | Drains all pending messages — lag goes to zero                                                    |
+| **Seek to Offset**    | Resets all consumer offsets to 0, explains event replay and `seekToBeginning()`                   |
+| **Show Replication**  | Explains leader/follower replication, ISR, and `acks=all`                                         |
+| **Add Partition**     | Adds a new partition live, triggers a virtual consumer group rebalance                            |
+| **Reset Everything**  | Clears all state back to a clean slate                                                            |
+
 
 ---
 
@@ -60,7 +66,7 @@ Shows each consumer's partition assignment, committed offset, high-water mark, a
 - **High-water mark** — the last committed (fully replicated) offset
 - **Consumer lag** — high-water mark minus committed offset
 - **ISR (In-Sync Replicas)** — which replicas are caught up with the leader
-- **`__consumer_offsets`** — the compacted internal topic that stores group positions
+- `**__consumer_offsets`** — the compacted internal topic that stores group positions
 - **Rebalancing** — what triggers it, what happens during it
 - **Event replay** — seeking back to offset 0 to reprocess retained messages
 - **Batching** — `RecordAccumulator`, `linger.ms`, `batch.size`
@@ -108,3 +114,4 @@ Pure HTML, CSS, and vanilla JavaScript. No frameworks, no external runtime depen
 - [Apache Kafka Documentation](https://kafka.apache.org/documentation/)
 - [Kafka: The Definitive Guide](https://www.confluent.io/resources/kafka-the-definitive-guide/) — Confluent free PDF
 - [Confluent Developer](https://developer.confluent.io/) — hands-on courses
+
