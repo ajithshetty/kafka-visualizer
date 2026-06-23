@@ -1,0 +1,1437 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Kafka Internals Visualizer</title>
+<style>
+  @import url('https://fonts.googleapis.com/css2?family=JetBrains+Mono:wght@400;600;700&family=Inter:wght@400;500;600;700&display=swap');
+
+  :root {
+    --bg: #0d1117;
+    --surface: #161b22;
+    --surface2: #1c2333;
+    --border: #30363d;
+    --amber: #f0a500;
+    --amber-dim: #a06e00;
+    --amber-glow: rgba(240,165,0,0.15);
+    --green: #3fb950;
+    --blue: #58a6ff;
+    --purple: #bc8cff;
+    --red: #f85149;
+    --text: #e6edf3;
+    --text-muted: #8b949e;
+    --text-dim: #484f58;
+    --producer: #58a6ff;
+    --kafka: #f0a500;
+    --consumer: #3fb950;
+  }
+
+  * { box-sizing: border-box; margin: 0; padding: 0; }
+
+  body {
+    background: var(--bg);
+    color: var(--text);
+    font-family: 'Inter', sans-serif;
+    min-height: 100vh;
+    overflow-x: hidden;
+  }
+
+  /* HEADER */
+  header {
+    padding: 20px 32px;
+    border-bottom: 1px solid var(--border);
+    display: flex;
+    align-items: center;
+    gap: 16px;
+    background: var(--surface);
+  }
+  .logo {
+    font-family: 'JetBrains Mono', monospace;
+    font-size: 18px;
+    font-weight: 700;
+    color: var(--amber);
+    letter-spacing: -0.5px;
+  }
+  .logo span { color: var(--text-muted); }
+  .subtitle {
+    font-size: 13px;
+    color: var(--text-muted);
+    margin-left: auto;
+  }
+
+  /* LAYOUT */
+  .main {
+    display: flex;
+    flex-direction: column;
+    gap: 0;
+  }
+
+  /* PIPELINE CANVAS */
+  .pipeline-section {
+    padding: 32px;
+    position: relative;
+    min-height: 340px;
+  }
+
+  .pipeline-label {
+    font-size: 11px;
+    font-family: 'JetBrains Mono', monospace;
+    text-transform: uppercase;
+    letter-spacing: 2px;
+    color: var(--text-dim);
+    margin-bottom: 24px;
+  }
+
+  .pipeline {
+    display: flex;
+    align-items: center;
+    gap: 0;
+    position: relative;
+  }
+
+  /* BLOCKS */
+  .block {
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    gap: 8px;
+    flex-shrink: 0;
+  }
+
+  .block-box {
+    background: var(--surface2);
+    border: 1.5px solid var(--border);
+    border-radius: 10px;
+    padding: 16px 20px;
+    text-align: center;
+    cursor: pointer;
+    transition: all 0.2s;
+    position: relative;
+    min-width: 130px;
+  }
+
+  .block-box:hover { transform: translateY(-2px); }
+
+  .block-box.producer { border-color: var(--producer); }
+  .block-box.producer:hover { box-shadow: 0 0 20px rgba(88,166,255,0.25); }
+  .block-box.kafka-node { border-color: var(--kafka); }
+  .block-box.kafka-node:hover { box-shadow: 0 0 20px rgba(240,165,0,0.25); }
+  .block-box.consumer { border-color: var(--consumer); }
+  .block-box.consumer:hover { box-shadow: 0 0 20px rgba(63,185,80,0.25); }
+
+  .block-box.active { animation: pulse-box 0.6s ease; }
+
+  @keyframes pulse-box {
+    0% { transform: scale(1); }
+    40% { transform: scale(1.06); }
+    100% { transform: scale(1); }
+  }
+
+  .block-icon { font-size: 26px; margin-bottom: 4px; }
+  .block-name {
+    font-family: 'JetBrains Mono', monospace;
+    font-size: 12px;
+    font-weight: 600;
+    color: var(--text);
+  }
+  .block-role {
+    font-size: 10px;
+    color: var(--text-muted);
+    margin-top: 2px;
+  }
+
+  .block-label {
+    font-size: 11px;
+    color: var(--text-muted);
+    text-align: center;
+    max-width: 130px;
+    line-height: 1.4;
+  }
+
+  /* ARROWS / PIPES */
+  .pipe {
+    flex: 1;
+    height: 2px;
+    background: var(--border);
+    position: relative;
+    margin: 0 4px;
+    min-width: 60px;
+    align-self: center;
+    margin-bottom: 40px;
+  }
+
+  .pipe::after {
+    content: '';
+    position: absolute;
+    right: -6px;
+    top: -4px;
+    border: 5px solid transparent;
+    border-left-color: var(--border);
+  }
+
+  .pipe-label {
+    position: absolute;
+    top: -20px;
+    left: 50%;
+    transform: translateX(-50%);
+    font-size: 10px;
+    font-family: 'JetBrains Mono', monospace;
+    color: var(--text-dim);
+    white-space: nowrap;
+    background: var(--bg);
+    padding: 2px 6px;
+    border-radius: 4px;
+  }
+
+  .pipe.active {
+    background: var(--amber);
+    animation: pipe-flow 0.4s ease;
+  }
+  .pipe.active::after { border-left-color: var(--amber); }
+  .pipe.active-blue { background: var(--blue); }
+  .pipe.active-blue::after { border-left-color: var(--blue); }
+  .pipe.active-green { background: var(--green); }
+  .pipe.active-green::after { border-left-color: var(--green); }
+
+  @keyframes pipe-flow {
+    0% { opacity: 0.3; }
+    50% { opacity: 1; }
+    100% { opacity: 1; }
+  }
+
+  /* PARTICLE */
+  .particle {
+    position: fixed;
+    width: 10px;
+    height: 10px;
+    border-radius: 50%;
+    pointer-events: none;
+    z-index: 999;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    font-size: 8px;
+    font-family: 'JetBrains Mono', monospace;
+    color: #000;
+    font-weight: 700;
+  }
+
+  /* KAFKA INTERNALS */
+  .kafka-internals {
+    background: var(--surface);
+    border-top: 1px solid var(--border);
+    border-bottom: 1px solid var(--border);
+    padding: 28px 32px;
+  }
+
+  .section-title {
+    font-size: 13px;
+    font-family: 'JetBrains Mono', monospace;
+    color: var(--amber);
+    text-transform: uppercase;
+    letter-spacing: 1.5px;
+    margin-bottom: 20px;
+    display: flex;
+    align-items: center;
+    gap: 8px;
+  }
+  .section-title::before {
+    content: '';
+    display: block;
+    width: 3px;
+    height: 14px;
+    background: var(--amber);
+    border-radius: 2px;
+  }
+
+  .topic-grid {
+    display: grid;
+    grid-template-columns: 1fr 1fr;
+    gap: 20px;
+  }
+
+  @media (max-width: 900px) {
+    .topic-grid { grid-template-columns: 1fr; }
+    .pipeline { flex-wrap: wrap; justify-content: center; }
+    .pipe { min-width: 40px; }
+  }
+
+  .topic-card {
+    background: var(--bg);
+    border: 1px solid var(--border);
+    border-radius: 10px;
+    padding: 16px;
+  }
+
+  .topic-card-header {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    margin-bottom: 14px;
+  }
+
+  .topic-name {
+    font-family: 'JetBrains Mono', monospace;
+    font-size: 13px;
+    font-weight: 600;
+    color: var(--amber);
+  }
+
+  .topic-meta {
+    font-size: 10px;
+    color: var(--text-muted);
+  }
+
+  /* PARTITION */
+  .partition {
+    margin-bottom: 10px;
+  }
+
+  .partition-header {
+    display: flex;
+    align-items: center;
+    gap: 8px;
+    margin-bottom: 6px;
+  }
+
+  .partition-id {
+    font-family: 'JetBrains Mono', monospace;
+    font-size: 10px;
+    color: var(--text-muted);
+    background: var(--surface2);
+    padding: 2px 6px;
+    border-radius: 4px;
+  }
+
+  .partition-leader {
+    font-size: 10px;
+    color: var(--text-dim);
+  }
+
+  .offsets-row {
+    display: flex;
+    gap: 3px;
+    flex-wrap: wrap;
+  }
+
+  .offset-cell {
+    background: var(--surface2);
+    border: 1px solid var(--border);
+    border-radius: 4px;
+    width: 38px;
+    height: 38px;
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    justify-content: center;
+    cursor: pointer;
+    transition: all 0.15s;
+    position: relative;
+  }
+
+  .offset-cell:hover {
+    border-color: var(--amber);
+    background: var(--amber-glow);
+  }
+
+  .offset-cell.new-message {
+    border-color: var(--amber);
+    background: var(--amber-glow);
+    animation: new-msg 0.5s ease;
+  }
+
+  @keyframes new-msg {
+    0% { transform: scale(0.5); opacity: 0; }
+    60% { transform: scale(1.1); }
+    100% { transform: scale(1); opacity: 1; }
+  }
+
+  .offset-cell.consumed {
+    border-color: var(--green);
+    background: rgba(63,185,80,0.08);
+  }
+
+  .offset-num {
+    font-family: 'JetBrains Mono', monospace;
+    font-size: 9px;
+    color: var(--text-dim);
+    line-height: 1;
+  }
+
+  .offset-val {
+    font-family: 'JetBrains Mono', monospace;
+    font-size: 11px;
+    font-weight: 600;
+    color: var(--text);
+    line-height: 1.2;
+  }
+
+  .offset-cell.consumed .offset-num { color: var(--green); }
+
+  /* HEAD pointer */
+  .head-pointer {
+    position: absolute;
+    top: -16px;
+    left: 50%;
+    transform: translateX(-50%);
+    font-size: 8px;
+    color: var(--amber);
+    font-family: 'JetBrains Mono', monospace;
+    white-space: nowrap;
+  }
+
+  .consumer-pointer {
+    position: absolute;
+    bottom: -16px;
+    left: 50%;
+    transform: translateX(-50%);
+    font-size: 8px;
+    color: var(--green);
+    font-family: 'JetBrains Mono', monospace;
+    white-space: nowrap;
+  }
+
+  /* CONTROLS + INFO */
+  .bottom-section {
+    display: grid;
+    grid-template-columns: 1fr 1fr;
+    gap: 0;
+    border-top: 1px solid var(--border);
+  }
+
+  @media (max-width: 800px) {
+    .bottom-section { grid-template-columns: 1fr; }
+  }
+
+  .controls-panel {
+    padding: 28px 32px;
+    border-right: 1px solid var(--border);
+  }
+
+  .info-panel {
+    padding: 28px 32px;
+  }
+
+  .controls-grid {
+    display: grid;
+    grid-template-columns: 1fr 1fr;
+    gap: 10px;
+    margin-top: 16px;
+  }
+
+  .ctrl-btn {
+    background: var(--surface2);
+    border: 1.5px solid var(--border);
+    border-radius: 8px;
+    padding: 12px 14px;
+    color: var(--text);
+    font-family: 'Inter', sans-serif;
+    font-size: 12px;
+    font-weight: 500;
+    cursor: pointer;
+    text-align: left;
+    transition: all 0.15s;
+    display: flex;
+    flex-direction: column;
+    gap: 4px;
+  }
+
+  .ctrl-btn:hover { transform: translateY(-1px); }
+
+  .ctrl-btn.produce {
+    border-color: var(--blue);
+    color: var(--blue);
+  }
+  .ctrl-btn.produce:hover {
+    background: rgba(88,166,255,0.08);
+    box-shadow: 0 4px 12px rgba(88,166,255,0.15);
+  }
+
+  .ctrl-btn.consume {
+    border-color: var(--green);
+    color: var(--green);
+  }
+  .ctrl-btn.consume:hover {
+    background: rgba(63,185,80,0.08);
+    box-shadow: 0 4px 12px rgba(63,185,80,0.15);
+  }
+
+  .ctrl-btn.internal {
+    border-color: var(--amber);
+    color: var(--amber);
+  }
+  .ctrl-btn.internal:hover {
+    background: var(--amber-glow);
+    box-shadow: 0 4px 12px rgba(240,165,0,0.15);
+  }
+
+  .ctrl-btn.danger {
+    border-color: var(--red);
+    color: var(--red);
+  }
+  .ctrl-btn.danger:hover {
+    background: rgba(248,81,73,0.08);
+  }
+
+  .ctrl-btn-icon { font-size: 16px; }
+  .ctrl-btn-sub {
+    font-size: 10px;
+    opacity: 0.65;
+    font-weight: 400;
+    margin-top: 2px;
+  }
+
+  /* EVENT LOG */
+  .event-log {
+    background: var(--bg);
+    border: 1px solid var(--border);
+    border-radius: 8px;
+    padding: 12px;
+    height: 180px;
+    overflow-y: auto;
+    font-family: 'JetBrains Mono', monospace;
+    font-size: 11px;
+    margin-top: 16px;
+  }
+
+  .event-log::-webkit-scrollbar { width: 4px; }
+  .event-log::-webkit-scrollbar-track { background: transparent; }
+  .event-log::-webkit-scrollbar-thumb { background: var(--border); border-radius: 2px; }
+
+  .log-entry {
+    display: flex;
+    gap: 8px;
+    padding: 3px 0;
+    border-bottom: 1px solid rgba(48,54,61,0.4);
+    line-height: 1.5;
+  }
+
+  .log-time { color: var(--text-dim); flex-shrink: 0; }
+  .log-msg { color: var(--text-muted); }
+  .log-msg.blue { color: var(--blue); }
+  .log-msg.amber { color: var(--amber); }
+  .log-msg.green { color: var(--green); }
+  .log-msg.red { color: var(--red); }
+
+  /* INFO TOOLTIP */
+  .info-box {
+    background: var(--bg);
+    border: 1px solid var(--border);
+    border-radius: 8px;
+    padding: 14px 16px;
+    margin-top: 16px;
+    min-height: 220px;
+  }
+
+  .info-box-title {
+    font-family: 'JetBrains Mono', monospace;
+    font-size: 12px;
+    font-weight: 600;
+    color: var(--amber);
+    margin-bottom: 10px;
+    display: flex;
+    align-items: center;
+    gap: 6px;
+  }
+
+  .info-box-body {
+    font-size: 12px;
+    color: var(--text-muted);
+    line-height: 1.7;
+  }
+
+  .info-box-body code {
+    font-family: 'JetBrains Mono', monospace;
+    background: var(--surface2);
+    padding: 1px 5px;
+    border-radius: 3px;
+    color: var(--blue);
+    font-size: 11px;
+  }
+
+  .info-box-body strong { color: var(--text); }
+
+  /* STATS BAR */
+  .stats-bar {
+    display: flex;
+    gap: 0;
+    border-top: 1px solid var(--border);
+    border-bottom: 1px solid var(--border);
+    background: var(--surface);
+  }
+
+  .stat {
+    flex: 1;
+    padding: 12px 16px;
+    border-right: 1px solid var(--border);
+    display: flex;
+    flex-direction: column;
+    gap: 2px;
+  }
+  .stat:last-child { border-right: none; }
+
+  .stat-val {
+    font-family: 'JetBrains Mono', monospace;
+    font-size: 18px;
+    font-weight: 700;
+    color: var(--text);
+  }
+
+  .stat-label {
+    font-size: 10px;
+    color: var(--text-dim);
+    text-transform: uppercase;
+    letter-spacing: 0.5px;
+  }
+
+  /* TOOLTIPS */
+  [data-tip] {
+    position: relative;
+  }
+  [data-tip]:hover::after {
+    content: attr(data-tip);
+    position: absolute;
+    bottom: calc(100% + 6px);
+    left: 50%;
+    transform: translateX(-50%);
+    background: var(--surface2);
+    border: 1px solid var(--border);
+    color: var(--text-muted);
+    font-size: 10px;
+    font-family: 'Inter', sans-serif;
+    padding: 5px 8px;
+    border-radius: 5px;
+    white-space: nowrap;
+    z-index: 100;
+    pointer-events: none;
+    max-width: 200px;
+    white-space: normal;
+    text-align: center;
+    line-height: 1.4;
+  }
+
+  /* ACK BADGE */
+  .ack-badge {
+    position: absolute;
+    top: -8px;
+    right: -8px;
+    background: var(--green);
+    color: #000;
+    font-size: 8px;
+    font-family: 'JetBrains Mono', monospace;
+    font-weight: 700;
+    padding: 1px 4px;
+    border-radius: 3px;
+    opacity: 0;
+    transition: opacity 0.3s;
+  }
+
+  .ack-badge.show { opacity: 1; }
+
+  /* CONSUMER GROUP PANEL */
+  .consumer-group-panel {
+    background: var(--surface);
+    border-top: 1px solid var(--border);
+    padding: 20px 32px;
+  }
+
+  .cg-row {
+    display: flex;
+    gap: 12px;
+    flex-wrap: wrap;
+    margin-top: 14px;
+  }
+
+  .cg-card {
+    background: var(--bg);
+    border: 1px solid var(--border);
+    border-radius: 8px;
+    padding: 12px 14px;
+    min-width: 160px;
+  }
+
+  .cg-name {
+    font-family: 'JetBrains Mono', monospace;
+    font-size: 11px;
+    color: var(--green);
+    margin-bottom: 8px;
+    font-weight: 600;
+  }
+
+  .cg-offset-row {
+    display: flex;
+    align-items: center;
+    gap: 6px;
+    margin-bottom: 4px;
+    font-size: 11px;
+  }
+
+  .cg-partition { color: var(--text-dim); font-family: 'JetBrains Mono', monospace; }
+  .cg-committed { color: var(--green); font-family: 'JetBrains Mono', monospace; }
+  .cg-lag { color: var(--red); font-family: 'JetBrains Mono', monospace; font-size: 10px; }
+
+  /* HIGHLIGHT */
+  .highlight { animation: flash-highlight 0.8s ease; }
+  @keyframes flash-highlight {
+    0% { background: var(--amber-glow); }
+    100% { background: transparent; }
+  }
+
+  /* SCROLLBAR GLOBAL */
+  ::-webkit-scrollbar { width: 6px; height: 6px; }
+  ::-webkit-scrollbar-track { background: var(--bg); }
+  ::-webkit-scrollbar-thumb { background: var(--border); border-radius: 3px; }
+</style>
+</head>
+<body>
+
+<header>
+  <div class="logo">kafka<span>·</span>viz</div>
+  <div class="subtitle">Interactive Kafka Internals Explorer — click anything to see it in action</div>
+</header>
+
+<!-- STATS BAR -->
+<div class="stats-bar">
+  <div class="stat">
+    <div class="stat-val" id="stat-produced">0</div>
+    <div class="stat-label">Messages Produced</div>
+  </div>
+  <div class="stat">
+    <div class="stat-val" id="stat-consumed">0</div>
+    <div class="stat-label">Messages Consumed</div>
+  </div>
+  <div class="stat">
+    <div class="stat-val" id="stat-lag">0</div>
+    <div class="stat-label">Consumer Lag</div>
+  </div>
+  <div class="stat">
+    <div class="stat-val" id="stat-throughput">0/s</div>
+    <div class="stat-label">Throughput</div>
+  </div>
+</div>
+
+
+<!-- PIPELINE -->
+<div class="pipeline-section">
+  <div class="pipeline-label">End-to-end data flow — click a component to learn more</div>
+  <div class="pipeline" id="pipeline">
+
+    <!-- PRODUCER -->
+    <div class="block">
+      <div class="block-box producer" id="box-producer" onclick="clickProducer()" data-tip="Click to send a message to Kafka">
+        <div class="block-icon">⚙️</div>
+        <div class="block-name">Producer</div>
+        <div class="block-role">Your App / Service</div>
+        <div class="ack-badge" id="ack-badge">ack</div>
+      </div>
+      <div class="block-label">Sends messages via<br><code style="font-size:9px;background:#1c2333;padding:2px 4px;border-radius:3px;color:#58a6ff">KafkaProducer API</code></div>
+    </div>
+
+    <!-- PIPE 1 -->
+    <div class="pipe" id="pipe1">
+      <span class="pipe-label">TCP / TLS</span>
+    </div>
+
+    <!-- BROKER -->
+    <div class="block">
+      <div class="block-box kafka-node" id="box-broker" onclick="clickBroker()" data-tip="Kafka Broker — stores and serves messages">
+        <div class="block-icon">🗄️</div>
+        <div class="block-name">Broker</div>
+        <div class="block-role">kafka-broker-1:9092</div>
+      </div>
+      <div class="block-label">Receives, persists &amp;<br>serves messages</div>
+    </div>
+
+    <!-- PIPE 2 -->
+    <div class="pipe" id="pipe2">
+      <span class="pipe-label">Partition Log</span>
+    </div>
+
+    <!-- TOPIC / PARTITION visual shortcut -->
+    <div class="block">
+      <div class="block-box kafka-node" id="box-topic" onclick="clickTopic()" data-tip="Topic: named stream of records split into partitions">
+        <div class="block-icon">📦</div>
+        <div class="block-name">Topic</div>
+        <div class="block-role">orders-events</div>
+      </div>
+      <div class="block-label">Immutable append-only<br>ordered log per partition</div>
+    </div>
+
+    <!-- PIPE 3 -->
+    <div class="pipe" id="pipe3">
+      <span class="pipe-label">Fetch Request</span>
+    </div>
+
+    <!-- CONSUMER GROUP -->
+    <div class="block">
+      <div class="block-box kafka-node" id="box-cg" onclick="clickConsumerGroup()" data-tip="Consumer Group: multiple consumers share partition assignment">
+        <div class="block-icon">👥</div>
+        <div class="block-name">Consumer Group</div>
+        <div class="block-role">group: analytics-cg</div>
+      </div>
+      <div class="block-label">Tracks committed offsets<br>via <code style="font-size:9px;background:#1c2333;padding:2px 4px;border-radius:3px;color:#58a6ff">__consumer_offsets</code></div>
+    </div>
+
+    <!-- PIPE 4 -->
+    <div class="pipe" id="pipe4">
+      <span class="pipe-label">Process</span>
+    </div>
+
+    <!-- CONSUMER / SINK -->
+    <div class="block">
+      <div class="block-box consumer" id="box-consumer" onclick="clickConsumer()" data-tip="Consumer reads messages and commits offsets after processing">
+        <div class="block-icon">🎯</div>
+        <div class="block-name">Consumer</div>
+        <div class="block-role">Sink / Downstream</div>
+      </div>
+      <div class="block-label">Processes messages &amp;<br>commits offsets</div>
+    </div>
+
+  </div>
+</div>
+
+<!-- BOTTOM: CONTROLS + INFO -->
+<div class="bottom-section">
+  <div class="controls-panel">
+    <div class="section-title">Actions</div>
+    <div class="controls-grid">
+      <button class="ctrl-btn produce" onclick="produceMessage()">
+        <span class="ctrl-btn-icon">📤</span>
+        Produce Message
+        <span class="ctrl-btn-sub">Send 1 record to Kafka with a key</span>
+      </button>
+      <button class="ctrl-btn produce" onclick="produceBatch()">
+        <span class="ctrl-btn-icon">📦</span>
+        Produce Batch (5)
+        <span class="ctrl-btn-sub">Batching reduces network overhead</span>
+      </button>
+      <button class="ctrl-btn consume" onclick="consumeOne()">
+        <span class="ctrl-btn-icon">📥</span>
+        Consume &amp; Commit
+        <span class="ctrl-btn-sub">Poll + auto-commit offset</span>
+      </button>
+      <button class="ctrl-btn consume" onclick="consumeAll()">
+        <span class="ctrl-btn-icon">⚡</span>
+        Catch Up Consumer
+        <span class="ctrl-btn-sub">Drain all pending messages</span>
+      </button>
+      <button class="ctrl-btn internal" onclick="seekOffset()">
+        <span class="ctrl-btn-icon">⏪</span>
+        Seek to Offset
+        <span class="ctrl-btn-sub">Replay from beginning (reset)</span>
+      </button>
+      <button class="ctrl-btn internal" onclick="showReplication()">
+        <span class="ctrl-btn-icon">🔁</span>
+        Show Replication
+        <span class="ctrl-btn-sub">Leader → Follower ISR copy</span>
+      </button>
+      <button class="ctrl-btn internal" onclick="addPartition()">
+        <span class="ctrl-btn-icon">➕</span>
+        Add Partition
+        <span class="ctrl-btn-sub">Scale out parallelism</span>
+      </button>
+      <button class="ctrl-btn danger" onclick="resetAll()">
+        <span class="ctrl-btn-icon">🗑️</span>
+        Reset Everything
+        <span class="ctrl-btn-sub">Clear all messages &amp; offsets</span>
+      </button>
+    </div>
+
+    <div class="event-log" id="event-log">
+      <div class="log-entry"><span class="log-time">00:00</span><span class="log-msg amber">Kafka visualizer ready. Click any button or component above ↑</span></div>
+    </div>
+  </div>
+
+  <div class="info-panel">
+    <div class="section-title">How It Works</div>
+    <div class="info-box" id="info-box">
+      <div class="info-box-title" id="info-title">👆 Click anything to explore</div>
+      <div class="info-box-body" id="info-body">
+        Select any component in the pipeline above, or use the action buttons to simulate real Kafka behaviour. Each click shows you what happens internally — offsets advancing, partitions filling, consumer lag changing, and replication propagating.<br><br>
+        <strong>Quick tip:</strong> Try <em>Produce Message</em> first, then <em>Consume &amp; Commit</em> to see the full flow from source to sink.
+      </div>
+    </div>
+  </div>
+</div>
+
+<!-- TOPIC INTERNALS -->
+<div class="kafka-internals">
+  <div class="section-title">Topic Internals — Partitions &amp; Offsets</div>
+  <div class="topic-grid">
+
+    <!-- TOPIC 1 -->
+    <div class="topic-card">
+      <div class="topic-card-header">
+        <div class="topic-name">orders-events</div>
+        <div class="topic-meta">3 partitions · RF=2 · retention: 7d</div>
+      </div>
+      <div id="partitions-container">
+        <!-- rendered by JS -->
+      </div>
+    </div>
+
+    <!-- TOPIC 2: __consumer_offsets -->
+    <div class="topic-card">
+      <div class="topic-card-header">
+        <div class="topic-name" style="color:var(--purple)">__consumer_offsets</div>
+        <div class="topic-meta">Internal topic · Kafka-managed</div>
+      </div>
+      <div id="consumer-offsets-container">
+        <!-- rendered by JS -->
+      </div>
+      <div style="margin-top:10px;font-size:11px;color:var(--text-muted);line-height:1.6">
+        Kafka uses this internal compacted topic to <strong style="color:var(--text)">durably store consumer group offsets</strong>. When a consumer commits, a record is written here. Zookeeper was replaced by KRaft in Kafka 3.3+.
+      </div>
+    </div>
+
+  </div>
+</div>
+
+<!-- CONSUMER GROUP PANEL -->
+<div class="consumer-group-panel">
+  <div class="section-title">Consumer Group: analytics-cg</div>
+  <div class="cg-row" id="cg-row">
+    <!-- rendered by JS -->
+  </div>
+</div>
+
+
+<script>
+// ─── STATE ───────────────────────────────────────────────────────────────────
+const state = {
+  produced: 0,
+  consumed: 0,
+  messageKeys: ['user-123', 'order-456', 'item-789', 'user-999', 'order-001'],
+  partitions: [
+    { id: 0, leader: 'broker-1', messages: [], consumerOffset: 0 },
+    { id: 1, leader: 'broker-2', messages: [], consumerOffset: 0 },
+    { id: 2, leader: 'broker-1', messages: [], consumerOffset: 0 },
+  ],
+  consumerGroup: {
+    name: 'analytics-cg',
+    members: ['consumer-0', 'consumer-1', 'consumer-2'],
+    assignment: { 0: 'consumer-0', 1: 'consumer-1', 2: 'consumer-2' }
+  },
+  throughputCount: 0,
+  startTime: Date.now(),
+};
+
+let msgCounter = 0;
+
+// ─── PARTITION RENDER ────────────────────────────────────────────────────────
+function renderPartitions() {
+  const container = document.getElementById('partitions-container');
+  container.innerHTML = '';
+
+  state.partitions.forEach(p => {
+    const div = document.createElement('div');
+    div.className = 'partition';
+    div.innerHTML = `
+      <div class="partition-header">
+        <span class="partition-id">P${p.id}</span>
+        <span class="partition-leader">leader: ${p.leader}</span>
+        <span class="partition-leader" style="margin-left:auto;color:var(--text-dim)">
+          ${p.messages.length} msgs · next offset: ${p.messages.length}
+        </span>
+      </div>
+      <div class="offsets-row" id="offsets-p${p.id}">
+        ${renderOffsetCells(p)}
+        ${p.messages.length === 0 ? `<span style="font-size:11px;color:var(--text-dim);padding:10px 4px;font-family:'JetBrains Mono',monospace">empty — produce a message</span>` : ''}
+      </div>
+    `;
+    container.appendChild(div);
+  });
+}
+
+function renderOffsetCells(p) {
+  return p.messages.map((msg, i) => {
+    const isConsumed = i < p.consumerOffset;
+    const isHead = i === p.messages.length - 1;
+    return `
+      <div class="offset-cell ${isConsumed ? 'consumed' : ''}" 
+           onclick="showOffsetDetail(${p.id}, ${i})"
+           data-tip="Offset ${i} · Key: ${msg.key} · Click for details">
+        ${isHead ? `<span class="head-pointer">HEAD</span>` : ''}
+        ${i === p.consumerOffset && !isConsumed ? `<span class="consumer-pointer">▲cg</span>` : ''}
+        <span class="offset-num">o:${i}</span>
+        <span class="offset-val">${msg.shortVal}</span>
+      </div>
+    `;
+  }).join('');
+}
+
+function renderConsumerOffsets() {
+  const container = document.getElementById('consumer-offsets-container');
+  container.innerHTML = state.partitions.map(p => `
+    <div style="display:flex;align-items:center;gap:8px;margin-bottom:8px;font-size:11px">
+      <span style="font-family:'JetBrains Mono',monospace;color:var(--text-dim);width:20px">P${p.id}</span>
+      <span style="font-family:'JetBrains Mono',monospace;color:var(--purple)">committed: ${p.consumerOffset}</span>
+      <span style="font-family:'JetBrains Mono',monospace;color:var(--text-muted)">/ hw: ${p.messages.length}</span>
+      <span style="font-family:'JetBrains Mono',monospace;color:${(p.messages.length - p.consumerOffset) > 0 ? 'var(--red)' : 'var(--green)'};margin-left:auto">
+        lag: ${p.messages.length - p.consumerOffset}
+      </span>
+    </div>
+  `).join('');
+}
+
+function renderConsumerGroup() {
+  const cg = state.consumerGroup;
+  const row = document.getElementById('cg-row');
+  row.innerHTML = cg.members.map((m, i) => {
+    const p = state.partitions[i];
+    if (!p) return '';
+    const lag = p.messages.length - p.consumerOffset;
+    return `
+      <div class="cg-card">
+        <div class="cg-name">${m}</div>
+        <div class="cg-offset-row">
+          <span class="cg-partition">Assigned: P${p.id}</span>
+        </div>
+        <div class="cg-offset-row">
+          <span style="color:var(--text-muted);font-size:11px">Committed offset:</span>
+          <span class="cg-committed">${p.consumerOffset}</span>
+        </div>
+        <div class="cg-offset-row">
+          <span style="color:var(--text-muted);font-size:11px">High-water mark:</span>
+          <span style="font-family:'JetBrains Mono',monospace;color:var(--amber)">${p.messages.length}</span>
+        </div>
+        <div class="cg-offset-row">
+          <span style="color:var(--text-muted);font-size:11px">Lag:</span>
+          <span class="cg-lag" style="color:${lag > 0 ? 'var(--red)' : 'var(--green)'}">${lag}</span>
+        </div>
+      </div>
+    `;
+  }).join('');
+}
+
+function updateStats() {
+  document.getElementById('stat-produced').textContent = state.produced;
+  document.getElementById('stat-consumed').textContent = state.consumed;
+  const totalLag = state.partitions.reduce((s, p) => s + Math.max(0, p.messages.length - p.consumerOffset), 0);
+  document.getElementById('stat-lag').textContent = totalLag;
+  const elapsed = (Date.now() - state.startTime) / 1000;
+  document.getElementById('stat-throughput').textContent = elapsed > 0 ? (state.produced / elapsed).toFixed(1) + '/s' : '0/s';
+}
+
+function renderAll() {
+  renderPartitions();
+  renderConsumerOffsets();
+  renderConsumerGroup();
+  updateStats();
+}
+
+// ─── LOGGING ─────────────────────────────────────────────────────────────────
+function log(msg, cls = '') {
+  const log = document.getElementById('event-log');
+  const elapsed = ((Date.now() - state.startTime) / 1000).toFixed(1);
+  const time = elapsed.padStart(5, '0');
+  const entry = document.createElement('div');
+  entry.className = 'log-entry';
+  entry.innerHTML = `<span class="log-time">${time}s</span><span class="log-msg ${cls}">${msg}</span>`;
+  log.appendChild(entry);
+  log.scrollTop = log.scrollHeight;
+}
+
+// ─── INFO BOX ────────────────────────────────────────────────────────────────
+function showInfo(title, html) {
+  document.getElementById('info-title').textContent = title;
+  document.getElementById('info-body').innerHTML = html;
+}
+
+// ─── PARTICLE ANIMATION ──────────────────────────────────────────────────────
+function animateParticle(fromId, toId, color, label, cb) {
+  const from = document.getElementById(fromId);
+  const to = document.getElementById(toId);
+  if (!from || !to) { if(cb) cb(); return; }
+
+  const fr = from.getBoundingClientRect();
+  const tr = to.getBoundingClientRect();
+
+  const p = document.createElement('div');
+  p.className = 'particle';
+  p.style.background = color;
+  p.style.left = (fr.left + fr.width/2) + 'px';
+  p.style.top = (fr.top + fr.height/2) + 'px';
+  p.style.boxShadow = `0 0 8px ${color}`;
+  p.textContent = label;
+  document.body.appendChild(p);
+
+  const startX = fr.left + fr.width/2;
+  const startY = fr.top + fr.height/2;
+  const endX = tr.left + tr.width/2;
+  const endY = tr.top + tr.height/2;
+  const duration = 600;
+  const start = performance.now();
+
+  function step(now) {
+    const t = Math.min((now - start) / duration, 1);
+    const ease = t < 0.5 ? 2*t*t : -1+(4-2*t)*t;
+    p.style.left = (startX + (endX - startX) * ease) + 'px';
+    p.style.top = (startY + (endY - startY) * ease) + 'px';
+    p.style.opacity = t < 0.8 ? 1 : 1 - (t - 0.8) * 5;
+    if (t < 1) requestAnimationFrame(step);
+    else {
+      p.remove();
+      if (cb) cb();
+    }
+  }
+  requestAnimationFrame(step);
+}
+
+// ─── PIPE FLASH ──────────────────────────────────────────────────────────────
+function flashPipe(id, cls, duration = 800) {
+  const pipe = document.getElementById(id);
+  if (!pipe) return;
+  pipe.classList.add(cls);
+  setTimeout(() => pipe.classList.remove(cls), duration);
+}
+
+function flashBlock(id) {
+  const el = document.getElementById(id);
+  if (!el) return;
+  el.classList.add('active');
+  setTimeout(() => el.classList.remove('active'), 600);
+}
+
+// ─── PRODUCE ─────────────────────────────────────────────────────────────────
+function doProduceOne(showAnim = true, cb) {
+  const key = state.messageKeys[msgCounter % state.messageKeys.length];
+  // Key-based partitioning: hash(key) % partitions
+  const partIdx = msgCounter % state.partitions.length;
+  const val = `msg-${String(msgCounter).padStart(3,'0')}`;
+  const shortVal = `m${msgCounter}`;
+  msgCounter++;
+
+  state.partitions[partIdx].messages.push({ key, val, shortVal });
+  state.produced++;
+
+  if (showAnim) {
+    flashBlock('box-producer');
+    flashPipe('pipe1', 'active-blue', 600);
+    animateParticle('box-producer', 'box-broker', '#58a6ff', '⬤', () => {
+      flashBlock('box-broker');
+      flashPipe('pipe2', 'active', 600);
+      animateParticle('box-broker', 'box-topic', '#f0a500', '⬤', () => {
+        flashBlock('box-topic');
+        // Show ack badge
+        const badge = document.getElementById('ack-badge');
+        badge.classList.add('show');
+        setTimeout(() => badge.classList.remove('show'), 1500);
+
+        // Highlight new cell
+        setTimeout(() => {
+          renderAll();
+          const row = document.getElementById(`offsets-p${partIdx}`);
+          if (row && row.lastElementChild) {
+            row.lastElementChild.classList.add('new-message');
+            setTimeout(() => row.lastElementChild && row.lastElementChild.classList.remove('new-message'), 600);
+          }
+          if (cb) cb();
+        }, 100);
+      });
+    });
+
+    log(`Producer → Broker → P${partIdx}[offset:${state.partitions[partIdx].messages.length-1}] key="${key}" val="${val}"`, 'blue');
+  } else {
+    if (cb) cb();
+  }
+}
+
+function produceMessage() {
+  doProduceOne(true);
+  showInfo('📤 Message Production', `
+    <strong>What just happened:</strong><br><br>
+    1. Your <code>KafkaProducer</code> called <code>producer.send(record)</code><br>
+    2. The record was <strong>serialized</strong> (key + value → bytes)<br>
+    3. A <strong>partitioner</strong> hashed the message key to pick a partition: <code>hash(key) % numPartitions</code><br>
+    4. The message entered the <strong>producer's internal buffer</strong> (RecordAccumulator)<br>
+    5. A background I/O thread sent it to the <strong>Broker leader</strong> for that partition<br>
+    6. The broker appended it to the partition <strong>commit log</strong> (a .log file on disk)<br>
+    7. The broker sent back an <strong>ACK</strong> (acks=1 or acks=all depending on config)<br><br>
+    <strong>Key insight:</strong> Messages are never modified after writing — Kafka is an <em>append-only immutable log</em>.
+  `);
+}
+
+function produceBatch() {
+  let i = 0;
+  const next = () => {
+    if (i >= 5) { renderAll(); return; }
+    doProduceOne(false);
+    i++;
+    setTimeout(next, 80);
+  };
+  next();
+  flashBlock('box-producer');
+  flashPipe('pipe1', 'active-blue', 600);
+  setTimeout(() => {
+    flashBlock('box-broker');
+    flashPipe('pipe2', 'active', 600);
+    setTimeout(() => { flashBlock('box-topic'); renderAll(); }, 300);
+  }, 400);
+  log(`Batch of 5 records sent → distributed across partitions`, 'blue');
+  showInfo('📦 Batch Producing', `
+    <strong>Why batch?</strong><br><br>
+    Kafka producers don't send one message at a time by default. They buffer records in the <code>RecordAccumulator</code> and send them as a batch when either:<br><br>
+    • <code>batch.size</code> bytes are reached (default 16KB)<br>
+    • <code>linger.ms</code> timeout fires (default 0ms)<br><br>
+    <strong>Benefits of batching:</strong><br>
+    • Fewer TCP round-trips → much higher throughput<br>
+    • Better compression ratio (more data to compress)<br>
+    • Reduced broker CPU overhead<br><br>
+    <strong>Trade-off:</strong> Higher <code>linger.ms</code> = better batching, but adds latency.
+  `);
+}
+
+// ─── CONSUME ─────────────────────────────────────────────────────────────────
+function consumeOne() {
+  const p = state.partitions.find(p => p.consumerOffset < p.messages.length);
+  if (!p) {
+    log('No pending messages — consumer is caught up', 'amber');
+    showInfo('✅ Consumer Caught Up', `
+      <strong>Consumer lag = 0</strong><br><br>
+      All messages have been consumed and offsets committed. The consumer is <em>at the high-water mark</em>.<br><br>
+      Try producing more messages first, then consuming.
+    `);
+    return;
+  }
+  const msg = p.messages[p.consumerOffset];
+  const offset = p.consumerOffset;
+  p.consumerOffset++;
+  state.consumed++;
+
+  flashBlock('box-topic');
+  flashPipe('pipe3', 'active', 500);
+  animateParticle('box-topic', 'box-cg', '#f0a500', '⬤', () => {
+    flashBlock('box-cg');
+    flashPipe('pipe4', 'active-green', 500);
+    animateParticle('box-cg', 'box-consumer', '#3fb950', '⬤', () => {
+      flashBlock('box-consumer');
+      renderAll();
+    });
+  });
+
+  log(`Consumer polled P${p.id}[offset:${offset}] key="${msg.key}" → commit offset ${p.consumerOffset}`, 'green');
+  showInfo('📥 Consume & Commit', `
+    <strong>What just happened:</strong><br><br>
+    1. Consumer called <code>consumer.poll(timeout)</code><br>
+    2. Broker returned records from <strong>P${p.id}</strong> starting at offset <strong>${offset}</strong><br>
+    3. Consumer processed the message: key=<code>${msg.key}</code><br>
+    4. Consumer committed offset <strong>${p.consumerOffset}</strong> to <code>__consumer_offsets</code><br><br>
+    <strong>Commit strategies:</strong><br>
+    • <code>enable.auto.commit=true</code> — commits every <code>auto.commit.interval.ms</code><br>
+    • <code>commitSync()</code> — blocks until broker confirms<br>
+    • <code>commitAsync()</code> — non-blocking, callback-based<br><br>
+    <strong>Key insight:</strong> The <em>offset is owned by the consumer group</em>, not the broker. The broker just stores your committed position.
+  `);
+}
+
+function consumeAll() {
+  let any = false;
+  state.partitions.forEach(p => {
+    while (p.consumerOffset < p.messages.length) {
+      p.consumerOffset++;
+      state.consumed++;
+      any = true;
+    }
+  });
+  if (!any) {
+    log('Already caught up — nothing to drain', 'amber');
+    return;
+  }
+  flashBlock('box-topic'); flashPipe('pipe3', 'active-green', 800);
+  flashBlock('box-cg'); flashPipe('pipe4', 'active-green', 800);
+  setTimeout(() => { flashBlock('box-consumer'); renderAll(); }, 400);
+  log(`Consumer group drained all partitions — lag is now 0`, 'green');
+  showInfo('⚡ Catching Up', `
+    All pending messages consumed and offsets committed. Consumer lag is now <strong>0</strong>.<br><br>
+    <strong>What causes lag?</strong><br>
+    Lag = high-water mark − committed offset. It builds when:<br>
+    • Producers are faster than consumers<br>
+    • Consumer crashes without committing<br>
+    • Consumer is paused or slow<br><br>
+    <strong>Alert on lag</strong> in production using tools like Kafka's JMX metrics, Burrow, or CloudWatch.
+  `);
+}
+
+// ─── SEEK ─────────────────────────────────────────────────────────────────────
+function seekOffset() {
+  state.partitions.forEach(p => { p.consumerOffset = 0; });
+  renderAll();
+  log(`Consumer group reset to offset 0 on all partitions (replay from beginning)`, 'amber');
+  showInfo('⏪ Seek / Offset Reset', `
+    <strong>What seeking means:</strong><br><br>
+    You just moved the consumer's read position back to offset <strong>0</strong>. All previously consumed messages will be re-processed.<br><br>
+    <strong>Common seek strategies:</strong><br>
+    • <code>seekToBeginning()</code> — replay all retained messages<br>
+    • <code>seekToEnd()</code> — skip to latest, ignore history<br>
+    • <code>seek(partition, offset)</code> — go to exact position<br><br>
+    <strong>Why this is powerful:</strong> Kafka retains messages for a configurable period (default 7 days). Any consumer can rewind and re-process data — this is called <em>event replay</em> and is one of Kafka's killer features.<br><br>
+    <strong>To reset in production:</strong> <code>kafka-consumer-groups.sh --reset-offsets --to-earliest</code>
+  `);
+}
+
+// ─── REPLICATION ──────────────────────────────────────────────────────────────
+function showReplication() {
+  flashBlock('box-broker');
+  log(`Broker leader replicating to followers (ISR: [broker-1, broker-2])`, 'amber');
+  showInfo('🔁 Replication & ISR', `
+    <strong>How Kafka replicates:</strong><br><br>
+    Each partition has one <strong>leader</strong> and N-1 <strong>followers</strong> (replicas). The replication factor (RF) for <code>orders-events</code> is <strong>2</strong>.<br><br>
+    <strong>Write path:</strong><br>
+    1. Producer writes to the <strong>partition leader</strong><br>
+    2. Leader appends to its local log<br>
+    3. Followers fetch new data (pull model)<br>
+    4. Once all ISR members have the data, the offset is <em>committed</em> (high-water mark advances)<br><br>
+    <strong>ISR (In-Sync Replicas):</strong> Replicas that are caught up with the leader within <code>replica.lag.time.max.ms</code>. If a follower falls behind, it's removed from the ISR.<br><br>
+    <strong>acks=all</strong>: Producer waits for all ISR members to confirm — guarantees no data loss.
+  `);
+}
+
+// ─── ADD PARTITION ────────────────────────────────────────────────────────────
+function addPartition() {
+  const newId = state.partitions.length;
+  if (newId >= 6) {
+    log('Demo limit: max 6 partitions', 'amber');
+    return;
+  }
+  const brokers = ['broker-1', 'broker-2', 'broker-3'];
+  state.partitions.push({ id: newId, leader: brokers[newId % 3], messages: [], consumerOffset: 0 });
+  // Add a new consumer member if we haven't exceeded our virtual group
+  if (newId < 4) {
+    state.consumerGroup.members.push(`consumer-${newId}`);
+    state.consumerGroup.assignment[newId] = `consumer-${newId}`;
+  }
+  renderAll();
+  log(`Partition P${newId} added → consumer group will rebalance`, 'amber');
+  showInfo('➕ Adding a Partition', `
+    <strong>What just happened:</strong><br><br>
+    A new partition <strong>P${newId}</strong> was added to <code>orders-events</code>. Kafka triggered a <em>consumer group rebalance</em>.<br><br>
+    <strong>Why add partitions?</strong><br>
+    Partitions are the unit of parallelism. More partitions = more consumers can read in parallel = higher throughput.<br><br>
+    <strong>Rebalance process:</strong><br>
+    1. Group Coordinator detects partition count change<br>
+    2. All consumers in the group <em>pause</em> and rejoin<br>
+    3. Partitions are redistributed using the partition assignment strategy (RangeAssignor, RoundRobinAssignor, etc.)<br><br>
+    <strong>Warning:</strong> You can only add partitions, never remove them. Key-based routing will change after adding — consider this carefully.
+  `);
+}
+
+// ─── RESET ───────────────────────────────────────────────────────────────────
+function resetAll() {
+  state.partitions = [
+    { id: 0, leader: 'broker-1', messages: [], consumerOffset: 0 },
+    { id: 1, leader: 'broker-2', messages: [], consumerOffset: 0 },
+    { id: 2, leader: 'broker-1', messages: [], consumerOffset: 0 },
+  ];
+  state.consumerGroup.members = ['consumer-0', 'consumer-1', 'consumer-2'];
+  state.consumerGroup.assignment = { 0: 'consumer-0', 1: 'consumer-1', 2: 'consumer-2' };
+  state.produced = 0; state.consumed = 0;
+  msgCounter = 0;
+  state.startTime = Date.now();
+  renderAll();
+  document.getElementById('event-log').innerHTML = `<div class="log-entry"><span class="log-time">00.0s</span><span class="log-msg amber">Reset complete — fresh state</span></div>`;
+  showInfo('🗑️ Reset Complete', 'All messages and offsets cleared. Start fresh by producing messages.');
+}
+
+// ─── CLICK HANDLERS ──────────────────────────────────────────────────────────
+function clickProducer() {
+  flashBlock('box-producer');
+  showInfo('⚙️ Kafka Producer', `
+    The <strong>KafkaProducer</strong> is a thread-safe client that publishes records to topics.<br><br>
+    <strong>Key configs:</strong><br>
+    • <code>bootstrap.servers</code> — initial broker list for discovery<br>
+    • <code>key.serializer / value.serializer</code> — how to convert objects to bytes<br>
+    • <code>acks</code> — durability guarantee (0, 1, or all)<br>
+    • <code>retries</code> — auto-retry on transient failures<br>
+    • <code>compression.type</code> — snappy/lz4/zstd for throughput<br><br>
+    <strong>Internal components:</strong><br>
+    1. <em>Serializer</em> → bytes<br>
+    2. <em>Partitioner</em> → picks partition<br>
+    3. <em>RecordAccumulator</em> → batching buffer<br>
+    4. <em>Sender</em> (I/O thread) → sends to broker
+  `);
+}
+
+function clickBroker() {
+  flashBlock('box-broker');
+  showInfo('🗄️ Kafka Broker', `
+    A <strong>Broker</strong> is a single Kafka server. A Kafka cluster typically has 3+ brokers for fault tolerance.<br><br>
+    <strong>Responsibilities:</strong><br>
+    • Store partition logs on disk (sequential I/O = very fast)<br>
+    • Serve fetch requests from consumers<br>
+    • Replicate data to follower brokers<br>
+    • Manage partition leadership<br><br>
+    <strong>Log storage:</strong> Each partition is a directory of <em>segment files</em> (e.g. <code>00000000000000000000.log</code>). Kafka uses <em>zero-copy</em> (sendfile syscall) to transfer data from disk to network socket efficiently — no user-space copies.<br><br>
+    <strong>KRaft mode</strong> (Kafka 3.3+): Brokers no longer need ZooKeeper. Metadata is managed via a built-in Raft consensus protocol.
+  `);
+}
+
+function clickTopic() {
+  flashBlock('box-topic');
+  showInfo('📦 Topic & Partitions', `
+    A <strong>Topic</strong> is a named, durable stream of records. Each topic is split into <strong>partitions</strong> for scalability.<br><br>
+    <strong>Partition properties:</strong><br>
+    • Each partition is an <em>ordered, immutable sequence</em> of records<br>
+    • Records are assigned a monotonically increasing <strong>offset</strong><br>
+    • Ordering is guaranteed <em>within</em> a partition, not across partitions<br>
+    • Partitions are distributed across brokers<br><br>
+    <strong>Retention:</strong> Data is kept for a configurable time (<code>retention.ms</code>) or size (<code>retention.bytes</code>). After that, old segments are deleted (or compacted if <code>cleanup.policy=compact</code>).<br><br>
+    <strong>Compacted topics</strong> like <code>__consumer_offsets</code> keep only the latest value per key — great for changelog/state tables.
+  `);
+}
+
+function clickConsumerGroup() {
+  flashBlock('box-cg');
+  showInfo('👥 Consumer Group', `
+    A <strong>Consumer Group</strong> is a logical subscriber. Multiple consumer instances share the work of reading from a topic.<br><br>
+    <strong>Rules:</strong><br>
+    • Each partition is consumed by <em>exactly one</em> consumer in the group<br>
+    • If consumers > partitions, some consumers are idle<br>
+    • If consumers < partitions, some consumers handle multiple partitions<br><br>
+    <strong>Group Coordinator:</strong> A broker that manages group membership and offset commits via the <code>__consumer_offsets</code> internal topic.<br><br>
+    <strong>Rebalance triggers:</strong><br>
+    • Consumer joins or leaves the group<br>
+    • Partition count changes<br>
+    • <code>session.timeout.ms</code> expires (consumer seen as dead)<br><br>
+    <strong>Tip:</strong> For zero-downtime deploys, use <em>static group membership</em> (<code>group.instance.id</code>) to avoid rebalances on restarts.
+  `);
+}
+
+function clickConsumer() {
+  flashBlock('box-consumer');
+  showInfo('🎯 Kafka Consumer (Sink)', `
+    The <strong>KafkaConsumer</strong> pulls records from broker partitions. Unlike queues, reading does not delete the message.<br><br>
+    <strong>Poll loop:</strong><br>
+    <code>while (true) {<br>&nbsp;&nbsp;records = consumer.poll(100ms);<br>&nbsp;&nbsp;for (r : records) process(r);<br>&nbsp;&nbsp;consumer.commitSync();<br>}</code><br><br>
+    <strong>At-least-once vs exactly-once:</strong><br>
+    • Commit <em>after</em> processing → at-least-once (safe default)<br>
+    • Commit <em>before</em> processing → at-most-once (may lose data)<br>
+    • Transactional producer + consumer → exactly-once semantics (EOS)<br><br>
+    <strong>Deserializers</strong> convert bytes back to objects (must match producer's serializers).
+  `);
+}
+
+function showOffsetDetail(partId, offsetIdx) {
+  const p = state.partitions[partId];
+  const msg = p.messages[offsetIdx];
+  if (!msg) return;
+  const status = offsetIdx < p.consumerOffset ? '✅ consumed' : '⏳ unconsumed';
+  showInfo(`🔍 Offset ${offsetIdx} — Partition ${partId}`, `
+    <strong>Message details:</strong><br><br>
+    • Partition: <code>P${partId}</code><br>
+    • Offset: <code>${offsetIdx}</code><br>
+    • Key: <code>${msg.key}</code><br>
+    • Value: <code>${msg.val}</code><br>
+    • Status: ${status}<br><br>
+    <strong>What an offset is:</strong><br>
+    The offset is a unique, monotonically increasing integer assigned by the broker when a message is written. It acts like an index into the partition log.<br><br>
+    Consumers use their committed offset to know where to resume after a restart. There's no "delete on read" — the broker retains messages regardless of whether they've been consumed.
+  `);
+}
+
+// ─── INIT ────────────────────────────────────────────────────────────────────
+renderAll();
+</script>
+</body>
+</html>
