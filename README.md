@@ -8,7 +8,7 @@ No dependencies. No build step. Open the file in a browser.
 
 ## What it shows
 
-page
+![page](./assets/page.png)
 
 ### End-to-end pipeline
 
@@ -108,6 +108,9 @@ No npm install. No bundler. The file is fully self-contained.
 Pure HTML, CSS, and vanilla JavaScript. No frameworks, no external runtime dependencies. Google Fonts (`JetBrains Mono`, `Inter`) loaded via CDN for the monospace/sans pairing — works offline if you swap those out.
 
 ---
+
+## Demo
+![video](./assets/demo.mov)
 
 ## Related
 
