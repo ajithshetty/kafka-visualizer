@@ -8,7 +8,7 @@ No dependencies. No build step. Open the file in a browser.
 
 ## What it shows
 
-![page](./assets/page.png)
+page
 
 ### End-to-end pipeline
 
@@ -115,3 +115,5 @@ Pure HTML, CSS, and vanilla JavaScript. No frameworks, no external runtime depen
 - [Kafka: The Definitive Guide](https://www.confluent.io/resources/kafka-the-definitive-guide/) — Confluent free PDF
 - [Confluent Developer](https://developer.confluent.io/) — hands-on courses
 
+
+# Built in Love with Cursor and Claude
