@@ -247,7 +247,7 @@
 
   .topic-grid {
     display: grid;
-    grid-template-columns: 1fr 1fr;
+    grid-template-columns: 1fr 1fr 1fr;
     gap: 20px;
   }
 
@@ -689,8 +689,56 @@
 <header>
   <div class="logo">kafka<span>·</span>viz</div>
   <div class="subtitle">Interactive Kafka Internals Explorer — click anything to see it in action</div>
+  
 </header>
 
+
+<!-- BOTTOM: CONTROLS + INFO -->
+<div class="bottom-section">
+  <div class="controls-panel">
+    <div class="section-title">Actions</div>
+    <div class="controls-grid">
+      <button class="ctrl-btn produce" onclick="produceMessage()">
+        <span class="ctrl-btn-icon">📤</span>
+        Produce Message
+        <span class="ctrl-btn-sub">Send 1 record to Kafka with a key</span>
+      </button>
+      <button class="ctrl-btn produce" onclick="produceBatch()">
+        <span class="ctrl-btn-icon">📦</span>
+        Produce Batch (5)
+        <span class="ctrl-btn-sub">Batching reduces network overhead</span>
+      </button>
+      <button class="ctrl-btn consume" onclick="consumeOne()">
+        <span class="ctrl-btn-icon">📥</span>
+        Consume &amp; Commit
+        <span class="ctrl-btn-sub">Poll + auto-commit offset</span>
+      </button>
+      <button class="ctrl-btn consume" onclick="consumeAll()">
+        <span class="ctrl-btn-icon">⚡</span>
+        Catch Up Consumer
+        <span class="ctrl-btn-sub">Drain all pending messages</span>
+      </button>
+      <button class="ctrl-btn internal" onclick="seekOffset()">
+        <span class="ctrl-btn-icon">⏪</span>
+        Seek to Offset
+        <span class="ctrl-btn-sub">Replay from beginning (reset)</span>
+      </button>
+      <button class="ctrl-btn internal" onclick="showReplication()">
+        <span class="ctrl-btn-icon">🔁</span>
+        Show Replication
+        <span class="ctrl-btn-sub">Leader → Follower ISR copy</span>
+      </button>
+      <button class="ctrl-btn internal" onclick="addPartition()">
+        <span class="ctrl-btn-icon">➕</span>
+        Add Partition
+        <span class="ctrl-btn-sub">Scale out parallelism</span>
+      </button>
+      <button class="ctrl-btn danger" onclick="resetAll()">
+        <span class="ctrl-btn-icon">🗑️</span>
+        Reset Everything
+        <span class="ctrl-btn-sub">Clear all messages &amp; offsets</span>
+      </button>
+    </div>
 <!-- STATS BAR -->
 <div class="stats-bar">
   <div class="stat">
@@ -710,7 +758,23 @@
     <div class="stat-label">Throughput</div>
   </div>
 </div>
+    
+  </div>
 
+  <div class="info-panel">
+    <div class="section-title">How It Works</div>
+    <div class="info-box" id="info-box">
+      <div class="info-box-title" id="info-title">👆 Click anything to explore</div>
+      <div class="info-box-body" id="info-body">
+        Select any component in the pipeline above, or use the action buttons to simulate real Kafka behaviour. Each click shows you what happens internally — offsets advancing, partitions filling, consumer lag changing, and replication propagating.<br><br>
+        <strong>Quick tip:</strong> Try <em>Produce Message</em> first, then <em>Consume &amp; Commit</em> to see the full flow from source to sink.
+      </div>
+    </div>
+    <div class="event-log" id="event-log">
+      <div class="log-entry"><span class="log-time">00:00</span><span class="log-msg amber">Kafka visualizer ready. Click any button or component above ↑</span></div>
+    </div>
+  </div>
+</div>
 
 <!-- PIPELINE -->
 <div class="pipeline-section">
@@ -791,69 +855,6 @@
   </div>
 </div>
 
-<!-- BOTTOM: CONTROLS + INFO -->
-<div class="bottom-section">
-  <div class="controls-panel">
-    <div class="section-title">Actions</div>
-    <div class="controls-grid">
-      <button class="ctrl-btn produce" onclick="produceMessage()">
-        <span class="ctrl-btn-icon">📤</span>
-        Produce Message
-        <span class="ctrl-btn-sub">Send 1 record to Kafka with a key</span>
-      </button>
-      <button class="ctrl-btn produce" onclick="produceBatch()">
-        <span class="ctrl-btn-icon">📦</span>
-        Produce Batch (5)
-        <span class="ctrl-btn-sub">Batching reduces network overhead</span>
-      </button>
-      <button class="ctrl-btn consume" onclick="consumeOne()">
-        <span class="ctrl-btn-icon">📥</span>
-        Consume &amp; Commit
-        <span class="ctrl-btn-sub">Poll + auto-commit offset</span>
-      </button>
-      <button class="ctrl-btn consume" onclick="consumeAll()">
-        <span class="ctrl-btn-icon">⚡</span>
-        Catch Up Consumer
-        <span class="ctrl-btn-sub">Drain all pending messages</span>
-      </button>
-      <button class="ctrl-btn internal" onclick="seekOffset()">
-        <span class="ctrl-btn-icon">⏪</span>
-        Seek to Offset
-        <span class="ctrl-btn-sub">Replay from beginning (reset)</span>
-      </button>
-      <button class="ctrl-btn internal" onclick="showReplication()">
-        <span class="ctrl-btn-icon">🔁</span>
-        Show Replication
-        <span class="ctrl-btn-sub">Leader → Follower ISR copy</span>
-      </button>
-      <button class="ctrl-btn internal" onclick="addPartition()">
-        <span class="ctrl-btn-icon">➕</span>
-        Add Partition
-        <span class="ctrl-btn-sub">Scale out parallelism</span>
-      </button>
-      <button class="ctrl-btn danger" onclick="resetAll()">
-        <span class="ctrl-btn-icon">🗑️</span>
-        Reset Everything
-        <span class="ctrl-btn-sub">Clear all messages &amp; offsets</span>
-      </button>
-    </div>
-
-    <div class="event-log" id="event-log">
-      <div class="log-entry"><span class="log-time">00:00</span><span class="log-msg amber">Kafka visualizer ready. Click any button or component above ↑</span></div>
-    </div>
-  </div>
-
-  <div class="info-panel">
-    <div class="section-title">How It Works</div>
-    <div class="info-box" id="info-box">
-      <div class="info-box-title" id="info-title">👆 Click anything to explore</div>
-      <div class="info-box-body" id="info-body">
-        Select any component in the pipeline above, or use the action buttons to simulate real Kafka behaviour. Each click shows you what happens internally — offsets advancing, partitions filling, consumer lag changing, and replication propagating.<br><br>
-        <strong>Quick tip:</strong> Try <em>Produce Message</em> first, then <em>Consume &amp; Commit</em> to see the full flow from source to sink.
-      </div>
-    </div>
-  </div>
-</div>
 
 <!-- TOPIC INTERNALS -->
 <div class="kafka-internals">
@@ -884,16 +885,21 @@
         Kafka uses this internal compacted topic to <strong style="color:var(--text)">durably store consumer group offsets</strong>. When a consumer commits, a record is written here. Zookeeper was replaced by KRaft in Kafka 3.3+.
       </div>
     </div>
-
-  </div>
-</div>
-
-<!-- CONSUMER GROUP PANEL -->
+    <div class="topic-card">
+      <div class="topic-card-header">
+    <!-- CONSUMER GROUP PANEL -->
 <div class="consumer-group-panel">
   <div class="section-title">Consumer Group: analytics-cg</div>
   <div class="cg-row" id="cg-row">
     <!-- rendered by JS -->
   </div>
+</div>
+</div>
+
+  </div>
+</div>
+
+
 </div>
 
 
