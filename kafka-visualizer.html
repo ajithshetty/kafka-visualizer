@@ -69,10 +69,90 @@
 
   /* PIPELINE CANVAS */
   .pipeline-section {
-    padding: 32px;
+    display: flex;
     position: relative;
-    min-height: 340px;
+    min-height: 20px;
+    border-bottom: 1px solid var(--border);
   }
+
+  .pipeline-content {
+    flex: 0 0 55%;
+    padding: 32px;
+  }
+
+  .config-panel {
+    flex: 0 220%;
+    border-left: 1px solid var(--border);
+    background: var(--surface);
+    padding: 2px 2px;
+    overflow-y: auto;
+  }
+
+  .config-grid {
+    display: grid;
+    grid-template-columns: 1fr 1fr 1fr;
+    gap: 16px 20px;
+  }
+
+  .config-panel-title {
+    font-family: 'JetBrains Mono', monospace;
+    font-size: 11px;
+    color: var(--amber);
+    text-transform: uppercase;
+    letter-spacing: 1.5px;
+    margin-bottom: 18px;
+    display: flex;
+    align-items: center;
+    gap: 6px;
+  }
+  .config-panel-title::before {
+    content: '';
+    display: block;
+    width: 3px;
+    height: 12px;
+    background: var(--amber);
+    border-radius: 2px;
+  }
+
+  .config-group { margin-bottom: 8px; }
+
+  .config-group-title {
+    font-family: 'JetBrains Mono', monospace;
+    font-size: 9px;
+    color: var(--text-dim);
+    text-transform: uppercase;
+    letter-spacing: 1.5px;
+    margin-bottom: 8px;
+    padding-bottom: 4px;
+    border-bottom: 1px solid var(--border);
+  }
+
+  .config-row {
+    display: grid;
+    grid-template-columns: 1fr 1fr;
+    gap: 0;
+    justify-content: space-between;
+    align-items: baseline;
+    padding: 3px 0 0;
+  }
+
+  .config-key {
+    font-family: 'JetBrains Mono', monospace;
+    font-size: 10px;
+    color: var(--text-muted);
+    flex-shrink: 0;
+  }
+
+  .config-val {
+    font-family: 'JetBrains Mono', monospace;
+    font-size: 10px;
+    color: var(--blue);
+    text-align: right;
+  }
+
+  .config-val.amber { color: var(--amber); }
+  .config-val.green { color: var(--green); }
+  .config-val.red   { color: var(--red); }
 
   .pipeline-label {
     font-size: 11px;
@@ -103,7 +183,7 @@
     background: var(--surface2);
     border: 1.5px solid var(--border);
     border-radius: 10px;
-    padding: 16px 20px;
+    padding: 8px 8px;
     text-align: center;
     cursor: pointer;
     transition: all 0.2s;
@@ -147,6 +227,76 @@
     text-align: center;
     max-width: 130px;
     line-height: 1.4;
+  }
+
+  /* BROKER + TOPIC WRAPPER — shows Topic partitions live ON the broker, not a separate service */
+  .broker-topic-wrapper {
+    display: flex;
+    align-items: center;
+    border: 1px dashed var(--border);
+    border-radius: 14px;
+    padding: 16px 86px 16px;
+    position: relative;
+    flex-shrink: 0;
+    gap: 0;
+  }
+
+  .broker-topic-wrapper .pipe {
+    flex: 0 0 120px; /* fixed width inside wrapper — can't flex against outer pipeline */
+  }
+
+  .broker-topic-wrapper-label {
+    position: absolute;
+    top: -9px;
+    left: 14px;
+    font-size: 9px;
+    font-family: 'JetBrains Mono', monospace;
+    color: var(--text-dim);
+    background: var(--bg);
+    padding: 0 6px;
+    text-transform: uppercase;
+    letter-spacing: 1px;
+    white-space: nowrap;
+  }
+
+  /* PIPELINE CG WRAPPER — Consumer Group sits below Consumer, not in data path */
+  .pipeline-cg-wrapper {
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    flex-shrink: 0;
+  }
+
+  /* VERTICAL DASHED PIPE — coordination only, visually distinct from data pipes */
+  .pipe-vertical {
+    width: 0;
+    height: 44px;
+    border-left: 2px dashed var(--text-dim);
+    position: relative;
+    margin: 6px 0;
+  }
+
+  .pipe-vertical.active-green { border-left-color: var(--green); }
+  .pipe-vertical.active       { border-left-color: var(--amber); }
+
+  .pipe-vertical-label {
+    position: absolute;
+    left: 10px;
+    top: 50%;
+    transform: translateY(-50%);
+    font-size: 10px;
+    font-family: 'JetBrains Mono', monospace;
+    color: var(--text-dim);
+    white-space: nowrap;
+    background: var(--bg);
+    padding: 2px 6px;
+    border-radius: 4px;
+  }
+
+  /* Dashed border marks CG as coordination, not data transport */
+  .block-box.cg-coordination {
+    border-style: dashed;
+    opacity: 0.9;
   }
 
   /* ARROWS / PIPES */
@@ -286,21 +436,22 @@
   /* PARTITION */
   .partition {
     margin-bottom: 10px;
+    padding: 0px 46px;
   }
 
   .partition-header {
     display: flex;
     align-items: center;
-    gap: 8px;
+    gap: 38px;
     margin-bottom: 6px;
   }
 
   .partition-id {
     font-family: 'JetBrains Mono', monospace;
-    font-size: 10px;
+    font-size: 8px;
     color: var(--text-muted);
     background: var(--surface2);
-    padding: 2px 6px;
+    padding: 2px 46px;
     border-radius: 4px;
   }
 
@@ -319,8 +470,8 @@
     background: var(--surface2);
     border: 1px solid var(--border);
     border-radius: 4px;
-    width: 38px;
-    height: 38px;
+    width: 28px;
+    height: 28px;
     display: flex;
     flex-direction: column;
     align-items: center;
@@ -395,7 +546,7 @@
   /* CONTROLS + INFO */
   .bottom-section {
     display: grid;
-    grid-template-columns: 1fr 1fr;
+    grid-template-columns: 1fr;
     gap: 0;
     border-top: 1px solid var(--border);
   }
@@ -405,7 +556,7 @@
   }
 
   .controls-panel {
-    padding: 28px 32px;
+    padding: 5px 32px;
     border-right: 1px solid var(--border);
   }
 
@@ -415,7 +566,7 @@
 
   .controls-grid {
     display: grid;
-    grid-template-columns: 1fr 1fr;
+    grid-template-columns: 1fr 1fr 1fr 1fr 1fr 1fr 1fr 1fr;
     gap: 10px;
     margin-top: 16px;
   }
@@ -427,8 +578,8 @@
     padding: 12px 14px;
     color: var(--text);
     font-family: 'Inter', sans-serif;
-    font-size: 12px;
-    font-weight: 500;
+    font-size: 8px;
+    font-weight: 200;
     cursor: pointer;
     text-align: left;
     transition: all 0.15s;
@@ -442,6 +593,8 @@
   .ctrl-btn.produce {
     border-color: var(--blue);
     color: var(--blue);
+    width: 170px;
+
   }
   .ctrl-btn.produce:hover {
     background: rgba(88,166,255,0.08);
@@ -451,6 +604,7 @@
   .ctrl-btn.consume {
     border-color: var(--green);
     color: var(--green);
+    width: 170px;
   }
   .ctrl-btn.consume:hover {
     background: rgba(63,185,80,0.08);
@@ -460,6 +614,7 @@
   .ctrl-btn.internal {
     border-color: var(--amber);
     color: var(--amber);
+    width: 170px;
   }
   .ctrl-btn.internal:hover {
     background: var(--amber-glow);
@@ -469,6 +624,7 @@
   .ctrl-btn.danger {
     border-color: var(--red);
     color: var(--red);
+    width: 170px;
   }
   .ctrl-btn.danger:hover {
     background: rgba(248,81,73,0.08);
@@ -556,6 +712,7 @@
   .stats-bar {
     display: flex;
     gap: 0;
+    padding: 2px;
     border-top: 1px solid var(--border);
     border-bottom: 1px solid var(--border);
     background: var(--surface);
@@ -563,7 +720,7 @@
 
   .stat {
     flex: 1;
-    padding: 12px 16px;
+    padding: 8px 8px;
     border-right: 1px solid var(--border);
     display: flex;
     flex-direction: column;
@@ -694,6 +851,25 @@
 
 
 <!-- BOTTOM: CONTROLS + INFO -->
+
+<div class="stats-bar">
+  <div class="stat">
+    <div class="stat-val" id="stat-produced">0</div>
+    <div class="stat-label">Messages Produced</div>
+  </div>
+  <div class="stat">
+    <div class="stat-val" id="stat-consumed">0</div>
+    <div class="stat-label">Messages Consumed</div>
+  </div>
+  <div class="stat">
+    <div class="stat-val" id="stat-lag">0</div>
+    <div class="stat-label">Consumer Lag</div>
+  </div>
+  <div class="stat">
+    <div class="stat-val" id="stat-throughput">0/s</div>
+    <div class="stat-label">Throughput</div>
+  </div>
+</div>
 <div class="bottom-section">
   <div class="controls-panel">
     <div class="section-title">Actions</div>
@@ -711,7 +887,7 @@
       <button class="ctrl-btn consume" onclick="consumeOne()">
         <span class="ctrl-btn-icon">📥</span>
         Consume &amp; Commit
-        <span class="ctrl-btn-sub">Poll + auto-commit offset</span>
+        <span class="ctrl-btn-sub">Poll + commitSync (manual commit)</span>
       </button>
       <button class="ctrl-btn consume" onclick="consumeAll()">
         <span class="ctrl-btn-icon">⚡</span>
@@ -738,47 +914,11 @@
         Reset Everything
         <span class="ctrl-btn-sub">Clear all messages &amp; offsets</span>
       </button>
-    </div>
-<!-- STATS BAR -->
-<div class="stats-bar">
-  <div class="stat">
-    <div class="stat-val" id="stat-produced">0</div>
-    <div class="stat-label">Messages Produced</div>
-  </div>
-  <div class="stat">
-    <div class="stat-val" id="stat-consumed">0</div>
-    <div class="stat-label">Messages Consumed</div>
-  </div>
-  <div class="stat">
-    <div class="stat-val" id="stat-lag">0</div>
-    <div class="stat-label">Consumer Lag</div>
-  </div>
-  <div class="stat">
-    <div class="stat-val" id="stat-throughput">0/s</div>
-    <div class="stat-label">Throughput</div>
-  </div>
 </div>
-    
-  </div>
-
-  <div class="info-panel">
-    <div class="section-title">How It Works</div>
-    <div class="info-box" id="info-box">
-      <div class="info-box-title" id="info-title">👆 Click anything to explore</div>
-      <div class="info-box-body" id="info-body">
-        Select any component in the pipeline above, or use the action buttons to simulate real Kafka behaviour. Each click shows you what happens internally — offsets advancing, partitions filling, consumer lag changing, and replication propagating.<br><br>
-        <strong>Quick tip:</strong> Try <em>Produce Message</em> first, then <em>Consume &amp; Commit</em> to see the full flow from source to sink.
-      </div>
-    </div>
-    <div class="event-log" id="event-log">
-      <div class="log-entry"><span class="log-time">00:00</span><span class="log-msg amber">Kafka visualizer ready. Click any button or component above ↑</span></div>
-    </div>
-  </div>
-</div>
-
 <!-- PIPELINE -->
 <div class="pipeline-section">
-  <div class="pipeline-label">End-to-end data flow — click a component to learn more</div>
+  <div class="pipeline-content">
+  <div class="pipeline-label">End-to-end data flow — Consumer Group (below) coordinates but is not in the data path</div>
   <div class="pipeline" id="pipeline">
 
     <!-- PRODUCER -->
@@ -797,62 +937,100 @@
       <span class="pipe-label">TCP / TLS</span>
     </div>
 
-    <!-- BROKER -->
-    <div class="block">
-      <div class="block-box kafka-node" id="box-broker" onclick="clickBroker()" data-tip="Kafka Broker — stores and serves messages">
-        <div class="block-icon">🗄️</div>
-        <div class="block-name">Broker</div>
-        <div class="block-role">kafka-broker-1:9092</div>
+    <!-- BROKER + TOPIC: wrapped to show partition logs live ON the broker -->
+    <div class="broker-topic-wrapper">
+      <span class="broker-topic-wrapper-label">broker node — partitions stored here</span>
+
+      <!-- BROKER -->
+      <div class="block">
+        <div class="block-box kafka-node" id="box-broker" onclick="clickBroker()" data-tip="Kafka Broker — stores partition logs on disk and serves them to consumers">
+          <div class="block-icon">🗄️</div>
+          <div class="block-name">Broker</div>
+          <div class="block-role">kafka-broker-1:9092</div>
+        </div>
+        <div class="block-label">Receives, persists &amp;<br>serves messages</div>
       </div>
-      <div class="block-label">Receives, persists &amp;<br>serves messages</div>
-    </div>
 
-    <!-- PIPE 2 -->
-    <div class="pipe" id="pipe2">
-      <span class="pipe-label">Partition Log</span>
-    </div>
-
-    <!-- TOPIC / PARTITION visual shortcut -->
-    <div class="block">
-      <div class="block-box kafka-node" id="box-topic" onclick="clickTopic()" data-tip="Topic: named stream of records split into partitions">
-        <div class="block-icon">📦</div>
-        <div class="block-name">Topic</div>
-        <div class="block-role">orders-events</div>
+      <!-- PIPE 2: internal write, not a network hop -->
+      <div class="pipe" id="pipe2">
+        <span class="pipe-label">appends to log</span>
       </div>
-      <div class="block-label">Immutable append-only<br>ordered log per partition</div>
+
+      <!-- TOPIC: stored as partition logs on the broker above -->
+      <div class="block">
+        <div class="block-box kafka-node" id="box-topic" onclick="clickTopic()" data-tip="Topic: partition logs stored on this broker — not a separate service">
+          <div class="block-icon">📦</div>
+          <div class="block-name">Topic</div>
+          <div class="block-role">orders-events</div>
+        </div>
+        <div class="block-label">Immutable append-only<br>log — stored on broker</div>
+      </div>
+
     </div>
 
-    <!-- PIPE 3 -->
+    <!-- PIPE 3: direct data path, Topic → Consumer -->
     <div class="pipe" id="pipe3">
-      <span class="pipe-label">Fetch Request</span>
+      <span class="pipe-label">Records (Poll)</span>
     </div>
 
-    <!-- CONSUMER GROUP -->
-    <div class="block">
-      <div class="block-box kafka-node" id="box-cg" onclick="clickConsumerGroup()" data-tip="Consumer Group: multiple consumers share partition assignment">
-        <div class="block-icon">👥</div>
-        <div class="block-name">Consumer Group</div>
-        <div class="block-role">group: analytics-cg</div>
+    <!-- CONSUMER + CONSUMER GROUP stacked vertically.
+         Data ends at Consumer. CG is below, connected by offset-commit line only. -->
+    <div class="pipeline-cg-wrapper">
+
+      <!-- Consumer — end of the data path -->
+      <div class="block">
+        <div class="block-box consumer" id="box-consumer" onclick="clickConsumer()" data-tip="Fetches records directly from the broker partition leader and commits offsets to the Consumer Group">
+          <div class="block-icon">🎯</div>
+          <div class="block-name">Consumer</div>
+          <div class="block-role">Sink / Downstream</div>
+        </div>
+        <div class="block-label">Fetches from broker &amp;<br>commits offsets</div>
       </div>
-      <div class="block-label">Tracks committed offsets<br>via <code style="font-size:9px;background:#1c2333;padding:2px 4px;border-radius:3px;color:#58a6ff">__consumer_offsets</code></div>
-    </div>
 
-    <!-- PIPE 4 -->
-    <div class="pipe" id="pipe4">
-      <span class="pipe-label">Process</span>
-    </div>
-
-    <!-- CONSUMER / SINK -->
-    <div class="block">
-      <div class="block-box consumer" id="box-consumer" onclick="clickConsumer()" data-tip="Consumer reads messages and commits offsets after processing">
-        <div class="block-icon">🎯</div>
-        <div class="block-name">Consumer</div>
-        <div class="block-role">Sink / Downstream</div>
+      <!-- Vertical dashed connector — offset commits flow Consumer → CG -->
+      <div class="pipe-vertical" id="pipe4">
+        <span class="pipe-vertical-label">offset commits</span>
       </div>
-      <div class="block-label">Processes messages &amp;<br>commits offsets</div>
+
+      <!-- Consumer Group — coordination layer, NOT in the data path -->
+      <div class="block">
+        <div class="block-box kafka-node cg-coordination" id="box-cg" onclick="clickConsumerGroup()" data-tip="Coordination only — assigns partitions and tracks committed offsets. Data flows directly Broker → Consumer.">
+          <div class="block-icon">👥</div>
+          <div class="block-name">Consumer Group</div>
+          <div class="block-role">group: analytics-cg</div>
+        </div>
+        <div class="block-label">Coordination only —<br>assigns partitions &amp; offsets</div>
+      </div>
+
     </div>
 
   </div>
+  </div><!-- end .pipeline-content -->
+
+  <!-- CONFIG PANEL — 25% right column -->
+  <div class="config-panel">
+    <div class="info-panel">
+      <div class="section-title">How It Works</div>
+      <div class="info-box" id="info-box">
+        <div class="info-box-title" id="info-title">👆 Click anything to explore</div>
+        <div class="info-box-body" id="info-body">
+          Select any component in the pipeline above, or use the action buttons to simulate real Kafka behaviour. Each click shows you what happens internally — offsets advancing, partitions filling, consumer lag changing, and replication propagating.<br><br>
+          <strong>Quick tip:</strong> Try <em>Produce Message</em> first, then <em>Consume &amp; Commit</em> to see the full flow from source to sink.
+        </div>
+      </div>
+      
+      <div class="event-log" id="event-log">
+        <div class="log-entry"><span class="log-time">00:00</span><span class="log-msg amber">Kafka visualizer ready. Click any button or component above ↑</span></div>
+      </div>
+    </div>
+  </div><!-- end .config-panel -->
+
+</div>
+
+    
+  </div>
+
+  
 </div>
 
 
@@ -882,14 +1060,14 @@
         <!-- rendered by JS -->
       </div>
       <div style="margin-top:10px;font-size:11px;color:var(--text-muted);line-height:1.6">
-        Kafka uses this internal compacted topic to <strong style="color:var(--text)">durably store consumer group offsets</strong>. When a consumer commits, a record is written here. Zookeeper was replaced by KRaft in Kafka 3.3+.
+        Kafka uses this internal compacted topic to <strong style="color:var(--text)">durably store consumer group offsets</strong>. When a consumer commits, a record is written here — this replaced the earlier ZooKeeper-based offset storage in Kafka 0.9. ZooKeeper itself was replaced by <strong style="color:var(--text)">KRaft</strong> for <em>cluster metadata</em> (broker registration, leader election) in Kafka 3.3+ — a separate concern from offset storage.
       </div>
     </div>
     <div class="topic-card">
       <div class="topic-card-header">
     <!-- CONSUMER GROUP PANEL -->
 <div class="consumer-group-panel">
-  <div class="section-title">Consumer Group: analytics-cg</div>
+  <div class="section-title">Consumer Group: analytics-cg <span style="font-size:10px;color:var(--text-dim);font-family:'Inter',sans-serif;text-transform:none;letter-spacing:0;font-weight:400">(coordination layer — each consumer fetches directly from its broker partition leader)</span></div>
   <div class="cg-row" id="cg-row">
     <!-- rendered by JS -->
   </div>
@@ -904,6 +1082,15 @@
 
 
 <script>
+// ─── STABLE HASH (mirrors Kafka's key-based partitioning: hash(key) % n) ────
+function stableHash(str) {
+  let h = 0;
+  for (let i = 0; i < str.length; i++) {
+    h = (Math.imul(31, h) + str.charCodeAt(i)) | 0;
+  }
+  return Math.abs(h);
+}
+
 // ─── STATE ───────────────────────────────────────────────────────────────────
 const state = {
   produced: 0,
@@ -924,6 +1111,7 @@ const state = {
 };
 
 let msgCounter = 0;
+let consumeRoundRobin = 0; // cycles through partitions so each consumer gets a fair turn
 
 // ─── PARTITION RENDER ────────────────────────────────────────────────────────
 function renderPartitions() {
@@ -973,7 +1161,7 @@ function renderConsumerOffsets() {
     <div style="display:flex;align-items:center;gap:8px;margin-bottom:8px;font-size:11px">
       <span style="font-family:'JetBrains Mono',monospace;color:var(--text-dim);width:20px">P${p.id}</span>
       <span style="font-family:'JetBrains Mono',monospace;color:var(--purple)">committed: ${p.consumerOffset}</span>
-      <span style="font-family:'JetBrains Mono',monospace;color:var(--text-muted)">/ hw: ${p.messages.length}</span>
+      <span style="font-family:'JetBrains Mono',monospace;color:var(--text-muted)" title="Log End Offset — next write position. With RF>1, HWM trails LEO until followers replicate.">/ LEO: ${p.messages.length}</span>
       <span style="font-family:'JetBrains Mono',monospace;color:${(p.messages.length - p.consumerOffset) > 0 ? 'var(--red)' : 'var(--green)'};margin-left:auto">
         lag: ${p.messages.length - p.consumerOffset}
       </span>
@@ -984,27 +1172,56 @@ function renderConsumerOffsets() {
 function renderConsumerGroup() {
   const cg = state.consumerGroup;
   const row = document.getElementById('cg-row');
-  row.innerHTML = cg.members.map((m, i) => {
-    const p = state.partitions[i];
-    if (!p) return '';
-    const lag = p.messages.length - p.consumerOffset;
+  const n = cg.members.length;
+
+  // Distribute ALL partitions across consumers (round-robin, matches real RoundRobinAssignor)
+  const consumerPartitions = {};
+  cg.members.forEach(m => { consumerPartitions[m] = []; });
+  state.partitions.forEach((p, i) => {
+    consumerPartitions[cg.members[i % n]].push(p);
+  });
+
+  row.innerHTML = cg.members.map(m => {
+    const parts = consumerPartitions[m];
+    const totalLag = parts.reduce((s, p) => s + Math.max(0, p.messages.length - p.consumerOffset), 0);
+
+    if (parts.length === 1) {
+      const p = parts[0];
+      return `
+        <div class="cg-card">
+          <div class="cg-name">${m}</div>
+          <div class="cg-offset-row"><span class="cg-partition">Assigned: P${p.id}</span></div>
+          <div class="cg-offset-row">
+            <span style="color:var(--text-muted);font-size:11px">Committed offset:</span>
+            <span class="cg-committed">${p.consumerOffset}</span>
+          </div>
+          <div class="cg-offset-row">
+            <span style="color:var(--text-muted);font-size:11px">Log End Offset (LEO):</span>
+            <span style="font-family:'JetBrains Mono',monospace;color:var(--amber)">${p.messages.length}</span>
+          </div>
+          <div class="cg-offset-row">
+            <span style="color:var(--text-muted);font-size:11px">Lag:</span>
+            <span class="cg-lag" style="color:${totalLag > 0 ? 'var(--red)' : 'var(--green)'}">${totalLag}</span>
+          </div>
+        </div>
+      `;
+    }
+
+    // Multiple partitions per consumer (partitions > consumers after rebalance)
     return `
       <div class="cg-card">
         <div class="cg-name">${m}</div>
-        <div class="cg-offset-row">
-          <span class="cg-partition">Assigned: P${p.id}</span>
-        </div>
-        <div class="cg-offset-row">
-          <span style="color:var(--text-muted);font-size:11px">Committed offset:</span>
-          <span class="cg-committed">${p.consumerOffset}</span>
-        </div>
-        <div class="cg-offset-row">
-          <span style="color:var(--text-muted);font-size:11px">High-water mark:</span>
-          <span style="font-family:'JetBrains Mono',monospace;color:var(--amber)">${p.messages.length}</span>
-        </div>
-        <div class="cg-offset-row">
-          <span style="color:var(--text-muted);font-size:11px">Lag:</span>
-          <span class="cg-lag" style="color:${lag > 0 ? 'var(--red)' : 'var(--green)'}">${lag}</span>
+        ${parts.map(p => `
+          <div class="cg-offset-row" style="flex-wrap:wrap;gap:4px">
+            <span style="color:var(--amber);font-family:'JetBrains Mono',monospace;font-size:10px;font-weight:600">P${p.id}</span>
+            <span style="color:var(--text-muted);font-size:10px">off:${p.consumerOffset}</span>
+            <span style="color:var(--text-muted);font-size:10px">leo:${p.messages.length}</span>
+            <span style="font-size:10px;color:${(p.messages.length - p.consumerOffset) > 0 ? 'var(--red)' : 'var(--green)'}">lag:${p.messages.length - p.consumerOffset}</span>
+          </div>
+        `).join('')}
+        <div class="cg-offset-row" style="margin-top:4px;border-top:1px solid var(--border);padding-top:4px">
+          <span style="color:var(--text-muted);font-size:11px">Total Lag:</span>
+          <span class="cg-lag" style="color:${totalLag > 0 ? 'var(--red)' : 'var(--green)'}">${totalLag}</span>
         </div>
       </div>
     `;
@@ -1103,8 +1320,8 @@ function flashBlock(id) {
 // ─── PRODUCE ─────────────────────────────────────────────────────────────────
 function doProduceOne(showAnim = true, cb) {
   const key = state.messageKeys[msgCounter % state.messageKeys.length];
-  // Key-based partitioning: hash(key) % partitions
-  const partIdx = msgCounter % state.partitions.length;
+  // Key-based partitioning: same key always routes to the same partition
+  const partIdx = stableHash(key) % state.partitions.length;
   const val = `msg-${String(msgCounter).padStart(3,'0')}`;
   const shortVal = `m${msgCounter}`;
   msgCounter++;
@@ -1191,7 +1408,17 @@ function produceBatch() {
 
 // ─── CONSUME ─────────────────────────────────────────────────────────────────
 function consumeOne() {
-  const p = state.partitions.find(p => p.consumerOffset < p.messages.length);
+  // Round-robin through partitions so each assigned consumer gets a fair turn
+  const n = state.partitions.length;
+  let p = null;
+  for (let attempt = 0; attempt < n; attempt++) {
+    const candidate = state.partitions[(consumeRoundRobin + attempt) % n];
+    if (candidate.consumerOffset < candidate.messages.length) {
+      p = candidate;
+      consumeRoundRobin = (consumeRoundRobin + attempt + 1) % n;
+      break;
+    }
+  }
   if (!p) {
     log('No pending messages — consumer is caught up', 'amber');
     showInfo('✅ Consumer Caught Up', `
@@ -1206,15 +1433,15 @@ function consumeOne() {
   p.consumerOffset++;
   state.consumed++;
 
+  // Data flows directly Broker → Consumer (the CG is a coordination layer, not a data hop)
   flashBlock('box-topic');
   flashPipe('pipe3', 'active', 500);
-  animateParticle('box-topic', 'box-cg', '#f0a500', '⬤', () => {
-    flashBlock('box-cg');
-    flashPipe('pipe4', 'active-green', 500);
-    animateParticle('box-cg', 'box-consumer', '#3fb950', '⬤', () => {
-      flashBlock('box-consumer');
-      renderAll();
-    });
+  flashPipe('pipe4', 'active-green', 500);
+  animateParticle('box-topic', 'box-consumer', '#f0a500', '⬤', () => {
+    flashBlock('box-consumer');
+    // CG flashes separately to show offset commit, not data delivery
+    setTimeout(() => { flashBlock('box-cg'); }, 150);
+    renderAll();
   });
 
   log(`Consumer polled P${p.id}[offset:${offset}] key="${msg.key}" → commit offset ${p.consumerOffset}`, 'green');
@@ -1245,9 +1472,9 @@ function consumeAll() {
     log('Already caught up — nothing to drain', 'amber');
     return;
   }
-  flashBlock('box-topic'); flashPipe('pipe3', 'active-green', 800);
-  flashBlock('box-cg'); flashPipe('pipe4', 'active-green', 800);
-  setTimeout(() => { flashBlock('box-consumer'); renderAll(); }, 400);
+  // Data flows Broker → Consumer directly; CG flashes for offset commit
+  flashBlock('box-topic'); flashPipe('pipe3', 'active-green', 800); flashPipe('pipe4', 'active-green', 800);
+  setTimeout(() => { flashBlock('box-consumer'); flashBlock('box-cg'); renderAll(); }, 400);
   log(`Consumer group drained all partitions — lag is now 0`, 'green');
   showInfo('⚡ Catching Up', `
     All pending messages consumed and offsets committed. Consumer lag is now <strong>0</strong>.<br><br>
@@ -1334,6 +1561,7 @@ function resetAll() {
   state.consumerGroup.assignment = { 0: 'consumer-0', 1: 'consumer-1', 2: 'consumer-2' };
   state.produced = 0; state.consumed = 0;
   msgCounter = 0;
+  consumeRoundRobin = 0;
   state.startTime = Date.now();
   renderAll();
   document.getElementById('event-log').innerHTML = `<div class="log-entry"><span class="log-time">00.0s</span><span class="log-msg amber">Reset complete — fresh state</span></div>`;
@@ -1368,7 +1596,7 @@ function clickBroker() {
     • Serve fetch requests from consumers<br>
     • Replicate data to follower brokers<br>
     • Manage partition leadership<br><br>
-    <strong>Log storage:</strong> Each partition is a directory of <em>segment files</em> (e.g. <code>00000000000000000000.log</code>). Kafka uses <em>zero-copy</em> (sendfile syscall) to transfer data from disk to network socket efficiently — no user-space copies.<br><br>
+    <strong>Log storage:</strong> Topic partitions are stored <em>directly on the broker</em> as segment files (e.g. <code>00000000000000000000.log</code>) — there is no separate "Topic" service. Kafka uses <em>zero-copy</em> (sendfile syscall) to transfer data from disk to network socket efficiently — no user-space copies.<br><br>
     <strong>KRaft mode</strong> (Kafka 3.3+): Brokers no longer need ZooKeeper. Metadata is managed via a built-in Raft consensus protocol.
   `);
 }
@@ -1376,7 +1604,7 @@ function clickBroker() {
 function clickTopic() {
   flashBlock('box-topic');
   showInfo('📦 Topic & Partitions', `
-    A <strong>Topic</strong> is a named, durable stream of records. Each topic is split into <strong>partitions</strong> for scalability.<br><br>
+    A <strong>Topic</strong> is a named, durable stream of records. It is <em>not a separate service</em> — its partition logs are stored as files directly on the broker. Each topic is split into <strong>partitions</strong> for scalability.<br><br>
     <strong>Partition properties:</strong><br>
     • Each partition is an <em>ordered, immutable sequence</em> of records<br>
     • Records are assigned a monotonically increasing <strong>offset</strong><br>
@@ -1391,11 +1619,12 @@ function clickConsumerGroup() {
   flashBlock('box-cg');
   showInfo('👥 Consumer Group', `
     A <strong>Consumer Group</strong> is a logical subscriber. Multiple consumer instances share the work of reading from a topic.<br><br>
+    <strong>Important:</strong> The Consumer Group is a <em>coordination abstraction</em> — data does <strong>not</strong> pass through it. Each consumer fetches records <em>directly from the broker</em> (the partition leader). The CG manages who reads what and where they left off.<br><br>
     <strong>Rules:</strong><br>
     • Each partition is consumed by <em>exactly one</em> consumer in the group<br>
-    • If consumers > partitions, some consumers are idle<br>
+    • If consumers > partitions, extra consumers are idle<br>
     • If consumers < partitions, some consumers handle multiple partitions<br><br>
-    <strong>Group Coordinator:</strong> A broker that manages group membership and offset commits via the <code>__consumer_offsets</code> internal topic.<br><br>
+    <strong>Group Coordinator:</strong> A designated broker that manages group membership and stores committed offsets in <code>__consumer_offsets</code>.<br><br>
     <strong>Rebalance triggers:</strong><br>
     • Consumer joins or leaves the group<br>
     • Partition count changes<br>
