@@ -1,4 +1,8 @@
-![logo](./assets/logo.png)
+<p align="center">
+<picture>
+  <img src="assets/logo.png" alt="Logo" width="50%"> 
+</picture>
+</p>
 
 # kafka-viz
 
