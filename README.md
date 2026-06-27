@@ -1,10 +1,17 @@
+![logo](./assets/logo.png)
+
 # kafka-viz
 
-An interactive, single-file HTML visualizer for Apache Kafka internals. Built to make the end-to-end message flow — from producer to broker to consumer — tangible and clickable rather than something you read about in a diagram.
+An interactive, single-file HTML visualizer for Apache Kafka internals. Built to make the end-to-end message flow. From producer to broker to consumer — tangible and clickable rather than something you read about in a diagram.
 
 No dependencies. No build step. Open the file in a browser.
 
 ---
+
+## Access the link
+
+https://ajithshetty.github.io/kafka-visualizer/kafka-visualizer.html
+
 
 ## What it shows
 
